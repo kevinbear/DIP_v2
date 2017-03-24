@@ -27,6 +27,8 @@ void error_diffusion(void);
 void Gaussian_Low_Pass_Filter(void);
 void Sobel_High_Pass_Filter(void);
 void Median_Pass_Filter(void);
+int sort(int* array,int num);
+void Adaptive_Median_Pass_Filter(void);
 //--------------------------//
 /*--parallel--*/
 void* mask_x(void* arg);
@@ -82,7 +84,7 @@ int console(void)
 		temp=getc(stdin);
 		system("clear");
 		start:
-			printf("\n\n\n\n");
+			printf("\n\n");
 			printf("\t      +Please List bmp and input you want to chose image+\n");
 			printf("\t\t         _____       _______      _____   \n");
 			printf("\t\t        |  ___ \\    |__   __|    |  __ \\ \n");
@@ -95,7 +97,8 @@ int console(void)
 			printf("\t\t      +Error_diffusion: \"E\" or \"e\"         +\n");
 			printf("\t\t      +Gaussian_Low_Pass_Filter: \"G\" or \"g\"+\n");
 			printf("\t\t      +Sobel_High_Pass_Filter: \"S\" or \"s\"  +\n");
-			//printf("\t\t      +Median_Pass_Filter:\"M\"or\"m\"      +\n");
+			printf("\t\t      +Median_Pass_Filter: \"M\"             +\n");
+			printf("\t\t      +Adaptive_Median_Pass_Filter: \"m\"    +\n");
 			printf("\t\t      +Clean create bmp image: \"C\" or \"c\"  +\n");
 			printf("\t\t      +Terminate program: \"T\" or \"t\"       +\n");
 			puts("\t\t      --------------------------------------");
@@ -107,7 +110,7 @@ int console(void)
     				List_image();
     				system("clear");
     				goto start;
-    			case 'l':
+    		case 'l':
     				List_image();
     				system("clear");
     				goto start;
@@ -115,7 +118,7 @@ int console(void)
     				Clean_image();
     				system("clear");
     				goto start;
-    			case 'c':
+    		case 'c':
     				Clean_image();
     				system("clear");
     				goto start;
@@ -123,41 +126,41 @@ int console(void)
     				error_diffusion();
     				system("clear");
     				goto start;
-    			case 'e':
+    		case 'e':
     				error_diffusion();
     				system("clear");
     				goto start;
-    			case 'S':
+    		case 'S':
     				Sobel_High_Pass_Filter();
     				system("clear");
     				goto start;
-    			case 's':
+    		case 's':
     				Sobel_High_Pass_Filter();
     				system("clear");
     				goto start;
-    			case 'G':
+    		case 'G':
     				Gaussian_Low_Pass_Filter();
     				system("clear");
     				goto start;
-    			case 'g':
+    		case 'g':
     				Gaussian_Low_Pass_Filter();
     				system("clear");
     				goto start;
-    			/*case 'M':
-    				error_diffusion();
+    		case 'M':
+    				Median_Pass_Filter();
     				system("clear");
     				goto start;
-    			case 'm':
-    				error_diffusion();
+    		case 'm':
+    				Adaptive_Median_Pass_Filter();
     				system("clear");
-    				goto start;*/
-    			case 'T':
-    				system("clear");
-    				return 0;
-    			case 't':
+    				goto start;
+    		case 'T':
     				system("clear");
     				return 0;
-    			default:
+    		case 't':
+    				system("clear");
+    				return 0;
+    		default:
     				system("clear");
     				temp=getc(stdin);
     				printf("input function key error\n");
@@ -446,8 +449,178 @@ void* Gaussian_parallel(void* arg)
 //=====================================================================//
 
 /*--Median_Pass_Filter function--*/
-/*void Median_Pass_Filter(void)
+void Median_Pass_Filter(void)
+{
+	int width, height;
+	open_bmp(filename, R, R, R, width, height);
+	int a[9]={0,0,0,0,0,0,0,0,0};
+	int b[6]={0,0,0,0,0,0};
+	int c[4]={0,0,0,0};
+	/*PARA=(struct para *)malloc(sizeof(struct para)*4);
+	pthread_t tid[4];
+	for(int i=0;i<lsize;i++)
+	{
+		for(int j=0;j<wsize;j=j+4)
+		{	
+			for(int thr=0;thr<4;thr++)
+			{	
+				PARA[thr].x=j+thr;
+				PARA[thr].y=i;
+				pthread_create(&tid[thr],NULL,Gaussian_parallel,(void *)&PARA[thr]);
+			}
+			for(int thrend=0;thrend<4;thrend++)
+				pthread_join(tid[thrend],NULL);
+
+		}
+
+	}*/
+	for(int i=0;i<lsize;i++)
+	{
+		for(int j=0;j<wsize;j++)
+		{
+			if(i==0)//up y did't change
+			{
+				if(j==0)//leftup
+				{
+					c[0]=R[i][j];
+					c[1]=R[i][j+1];
+					c[2]=R[i+1][j];
+					c[3]=R[i+1][j+1];	
+					r[i][j]=sort(c,4);
+				}
+				else if(j==lsize-1)//rightup
+				{
+					c[0]=R[i][j-1];
+					c[1]=R[i][j];
+					c[2]=R[i+1][j-1];
+					c[3]=R[i+1][j];	
+					r[i][j]=sort(c,4);
+				}
+				else// x change up line
+				{
+					b[0]=R[i][j-1];
+					b[1]=R[i][j];
+					b[2]=R[i][j+1];
+					b[3]=R[i+1][j-1];
+					b[4]=R[i+1][j];
+					b[5]=R[i+1][j+1];	
+					r[i][j]=sort(b,6);
+				}
+
+			}
+			else if(i==lsize-1)//down y did't change
+			{
+				if(j==0)//leftdown
+				{
+					c[0]=R[i-1][j];
+					c[1]=R[i-1][j+1];
+					c[2]=R[i][j];
+					c[3]=R[i][j+1];	
+					r[i][j]=sort(c,4);
+				}
+				else if(j==lsize-1)//rightdown
+				{
+					c[0]=R[i-1][j-1];
+					c[1]=R[i-1][j];
+					c[2]=R[i][j-1];
+					c[3]=R[i][j];	
+					r[i][j]=sort(c,4);
+				}
+				else //x change down line
+				{
+					b[0]=R[i-1][j-1];
+					b[1]=R[i-1][j];
+					b[2]=R[i-1][j+1];
+					b[3]=R[i][j-1];
+					b[4]=R[i][j];
+					b[5]=R[i][j+1];	
+					r[i][j]=sort(b,6);
+				}
+			}
+			else if(j==0)
+			{
+				if(i==0 || i==lsize-1)//leftdown and leftup already done break
+				{
+					continue;
+				}
+				else //left edge line
+				{
+					b[0]=R[i-1][j];
+					b[1]=R[i-1][j+1];
+					b[2]=R[i][j];
+					b[3]=R[i][j+1];
+					b[4]=R[i+1][j];
+					b[5]=R[i+1][j+1];	
+					r[i][j]=sort(b,6);
+				}
+			}
+			else if(j==wsize-1)
+			{
+				if(i==0 || i==lsize-1)//rightdown and rightup already done break
+				{
+					continue;
+				}
+				else //right edge line
+				{
+					b[0]=R[i-1][j-1];
+					b[1]=R[i-1][j];
+					b[2]=R[i][j-1];
+					b[3]=R[i][j];
+					b[4]=R[i+1][j-1];
+					b[5]=R[i+1][j];	
+					r[i][j]=sort(b,6);
+				}
+			}
+			else // block 3*3
+			{
+				a[0]=R[i-1][j-1];
+				a[1]=R[i-1][j];
+				a[2]=R[i-1][j+1];
+				a[3]=R[i][j-1];
+				a[4]=R[i][j];
+				a[5]=R[i][j+1];
+				a[6]=R[i+1][j-1];
+				a[7]=R[i+1][j];
+				a[8]=R[i+1][j+1];	
+				r[i][j]=sort(a,9);
+			}
+		}
+	}
+	save_bmp("MPF.bmp", r, r, r);
+	//free(PARA); 
+	printf("\t\t      Job Finished!\n");
+	//clear stdin avoid getc() read old data frome stdin
+	char ch;
+	while((ch=getchar())!='\n'&&ch!=EOF);
+	//------------------------------------------------//
+	puts("\t\t      Please press any key to continue"); 
+	int temp; 
+	temp=getc(stdin);
+}
+int sort(int* array,int num)
+{
+	int med=0,sflag,temp;
+
+	for(int c=num-1;c>=0;c--)//c mean compare 
+	{
+		sflag=1;
+		for(int i=0;i<=c;i++)//i mean swap
+		{
+			if(array[i]<array[i+1])
+			{
+				temp=array[i];
+				array[i]=array[i+1];
+				array[i+1]=temp;
+				sflag=0;
+			}
+		}
+		if(sflag==1)
+			break;
+	}
+	med=array[num/2];
+	return med;
+}
+void Adaptive_Median_Pass_Filter(void)
 {
 
-
-}*/
+}
